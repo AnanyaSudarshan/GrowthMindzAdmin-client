@@ -57,3 +57,6 @@ function AddCourseModal({ isOpen, onClose, onSave }) {
 }
 
 export default AddCourseModal;
+
+
+

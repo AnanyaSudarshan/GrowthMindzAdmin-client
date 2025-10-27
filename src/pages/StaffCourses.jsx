@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import StaffLayout from '../components/StaffLayout';
 import AddVideoModal from '../components/AddVideoModal';
-import AddQuizModal from '../components/AddQuizModal';
+import QuizBuilderModal from '../components/QuizBuilderModal';
+import QuizDetailsModal from '../components/QuizDetailsModal';
 import '../App.css';
 
 function StaffCourses() {
@@ -11,14 +12,21 @@ function StaffCourses() {
       name: "NISM Course", 
       videos: [{ id: 1, title: "Intro to NISM", description: "Introduction to NISM concepts" }], 
       quizzes: [{ 
-        id: 1, 
-        title: "Basic Quiz", 
-        question: "What is NISM?", 
-        optionA: "National Institute of Securities Markets", 
-        optionB: "New System", 
-        optionC: "None", 
-        optionD: "Other",
-        correctAnswer: "A"
+        id: 1,
+        type: 'quiz-builder',
+        title: "Basic Quiz",
+        questions: [
+          {
+            id: 1,
+            questionText: "What is NISM?",
+            optionA: "National Institute of Securities Markets",
+            optionB: "New System",
+            optionC: "None",
+            optionD: "Other",
+            correctAnswer: "A"
+          }
+        ],
+        createdAt: new Date().toISOString()
       }] 
     },
     { 
@@ -30,14 +38,21 @@ function StaffCourses() {
       ], 
       quizzes: [
         { 
-          id: 2, 
-          title: "Stock Fundamentals", 
-          question: "What is a bull market?", 
-          optionA: "Rising market", 
-          optionB: "Falling market", 
-          optionC: "Stable market", 
-          optionD: "None",
-          correctAnswer: "A"
+          id: 2,
+          type: 'quiz-builder',
+          title: "Stock Fundamentals",
+          questions: [
+            {
+              id: 1,
+              questionText: "What is a bull market?",
+              optionA: "Rising market",
+              optionB: "Falling market",
+              optionC: "Stable market",
+              optionD: "None",
+              correctAnswer: "A"
+            }
+          ],
+          createdAt: new Date().toISOString()
         }
       ] 
     },
@@ -51,8 +66,12 @@ function StaffCourses() {
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
-  const [showAddQuizModal, setShowAddQuizModal] = useState(false);
+  const [showQuizBuilderModal, setShowQuizBuilderModal] = useState(false);
   const [localCourses, setLocalCourses] = useState(courses);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [quizDetailsOpen, setQuizDetailsOpen] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState(null);
+  const [questionEditIdx, setQuestionEditIdx] = useState(null);
 
   // Add Video
   const handleAddVideo = (videoData) => {
@@ -88,21 +107,56 @@ function StaffCourses() {
     console.log('Video deleted:', videoId);
   };
 
-  // Add Quiz
-  const handleAddQuiz = (quizData) => {
+  // Add/Edit Quiz (from quiz builder)
+  const handleAddQuizBuilder = (quizData, mode = 'add') => {
     if (!selectedCourse) return;
-    const newQuiz = {
-      id: Date.now(),
-      ...quizData
-    };
-    setLocalCourses(localCourses.map(c => 
-      c.id === selectedCourse.id 
-        ? { ...c, quizzes: [...c.quizzes, newQuiz] }
-        : c
-    ));
-    setSelectedCourse({ ...selectedCourse, quizzes: [...selectedCourse.quizzes, newQuiz] });
-    setShowAddQuizModal(false);
-    console.log('Quiz added to course:', selectedCourse.id);
+    
+    if (mode === 'edit') {
+      // Update existing quiz
+      const updatedQuiz = {
+        ...editingQuiz,
+        title: quizData.title,
+        questions: quizData.questions
+      };
+      
+      setLocalCourses(localCourses.map(c => 
+        c.id === selectedCourse.id 
+          ? { ...c, quizzes: c.quizzes.map(q => q.id === editingQuiz.id ? updatedQuiz : q) }
+          : c
+      ));
+      setSelectedCourse({ 
+        ...selectedCourse, 
+        quizzes: selectedCourse.quizzes.map(q => q.id === editingQuiz.id ? updatedQuiz : q)
+      });
+      console.log('Quiz updated:', JSON.stringify(updatedQuiz, null, 2));
+    } else {
+      // Add new quiz
+      const newQuiz = {
+        id: Date.now(),
+        type: 'quiz-builder',
+        title: quizData.title,
+        courseName: quizData.courseName,
+        questions: quizData.questions,
+        createdAt: quizData.createdAt
+      };
+
+      setLocalCourses(localCourses.map(c => 
+        c.id === selectedCourse.id 
+          ? { ...c, quizzes: [...c.quizzes, newQuiz] }
+          : c
+      ));
+      setSelectedCourse({ ...selectedCourse, quizzes: [...selectedCourse.quizzes, newQuiz] });
+      console.log('Quiz with multiple questions added:', JSON.stringify(newQuiz, null, 2));
+    }
+    
+    setShowQuizBuilderModal(false);
+    setEditingQuiz(null);
+  };
+
+  // Open Edit Quiz Modal
+  const openEditQuizModal = (quiz) => {
+    setEditingQuiz(quiz);
+    setShowQuizBuilderModal(true);
   };
 
   // Delete Quiz
@@ -177,7 +231,10 @@ function StaffCourses() {
               <h2>📝 Quizzes</h2>
               <button 
                 className="btn btn-success" 
-                onClick={() => setShowAddQuizModal(true)}
+                onClick={() => {
+                  setEditingQuiz(null);
+                  setShowQuizBuilderModal(true);
+                }}
               >
                 ➕ Add Quiz
               </button>
@@ -190,21 +247,36 @@ function StaffCourses() {
                   <div key={quiz.id} className="item-card">
                     <div className="item-info">
                       <h3>{quiz.title}</h3>
-                      <p>{quiz.question}</p>
-                      <div className="quiz-options">
-                        <span>A: {quiz.optionA}</span> | 
-                        <span>B: {quiz.optionB}</span> | 
-                        <span>C: {quiz.optionC}</span> | 
-                        <span>D: {quiz.optionD}</span>
+                      <div>
+                        <p><strong>Questions:</strong> {quiz.questions?.length || 0}</p>
+                        {quiz.createdAt && (
+                          <p className="created-at">Created: {new Date(quiz.createdAt).toLocaleDateString()}</p>
+                        )}
                       </div>
-                      <p className="correct-answer">✓ Correct Answer: {quiz.correctAnswer}</p>
                     </div>
-                    <button 
-                      className="btn btn-danger btn-small"
-                      onClick={() => handleDeleteQuiz(quiz.id)}
-                    >
-                      ❌ Delete
-                    </button>
+                    <div className="item-actions">
+                      <button
+                        className="btn btn-secondary btn-small"
+                        onClick={() => {
+                          setSelectedQuiz(quiz);
+                          setQuizDetailsOpen(true);
+                        }}
+                      >
+                        📋 View Questions
+                      </button>
+                      <button 
+                        className="btn btn-secondary btn-small"
+                        onClick={() => openEditQuizModal(quiz)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        className="btn btn-danger btn-small"
+                        onClick={() => handleDeleteQuiz(quiz.id)}
+                      >
+                        ❌ Delete
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -219,11 +291,38 @@ function StaffCourses() {
           onSave={handleAddVideo}
           courseName={selectedCourse.name}
         />
-        <AddQuizModal 
-          isOpen={showAddQuizModal}
-          onClose={() => setShowAddQuizModal(false)}
-          onSave={handleAddQuiz}
+        <QuizBuilderModal 
+          isOpen={showQuizBuilderModal}
+          onClose={() => {
+            setShowQuizBuilderModal(false);
+            setEditingQuiz(null);
+            setQuestionEditIdx(null);
+          }}
+          onSave={handleAddQuizBuilder}
           courseName={selectedCourse.name}
+          editQuiz={editingQuiz}
+          editQuestionIdx={questionEditIdx}
+        />
+        <QuizDetailsModal
+          isOpen={quizDetailsOpen && !!selectedQuiz}
+          onClose={() => {
+            setQuizDetailsOpen(false);
+            setSelectedQuiz(null);
+            setQuestionEditIdx(null);
+          }}
+          quiz={selectedQuiz}
+          onEditQuiz={() => {
+            setQuizDetailsOpen(false);
+            setEditingQuiz(selectedQuiz);
+            setShowQuizBuilderModal(true);
+            setQuestionEditIdx(null);
+          }}
+          onEditQuestion={qIdx => {
+            setQuizDetailsOpen(false);
+            setEditingQuiz({ ...selectedQuiz, _editQuestionIdx: qIdx });
+            setShowQuizBuilderModal(true);
+            setQuestionEditIdx(qIdx);
+          }}
         />
       </StaffLayout>
     );

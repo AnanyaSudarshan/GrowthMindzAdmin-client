@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
+function AddQuizModal({ isOpen, onClose, onSave, courseName, editQuiz = null }) {
   const [formData, setFormData] = useState({
     title: '',
     question: '',
@@ -10,6 +10,31 @@ function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
     optionD: '',
     correctAnswer: 'A'
   });
+
+  // Update form when editing
+  useEffect(() => {
+    if (editQuiz && isOpen) {
+      setFormData({
+        title: editQuiz.title || '',
+        question: editQuiz.question || '',
+        optionA: editQuiz.optionA || '',
+        optionB: editQuiz.optionB || '',
+        optionC: editQuiz.optionC || '',
+        optionD: editQuiz.optionD || '',
+        correctAnswer: editQuiz.correctAnswer || 'A'
+      });
+    } else if (!isOpen) {
+      setFormData({
+        title: '',
+        question: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctAnswer: 'A'
+      });
+    }
+  }, [editQuiz, isOpen]);
 
   if (!isOpen) return null;
 
@@ -24,16 +49,25 @@ function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
       alert('Please enter all 4 options');
       return;
     }
-    onSave(formData);
-    setFormData({
-      title: '',
-      question: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctAnswer: 'A'
-    });
+
+    const quizData = {
+      ...formData,
+      id: editQuiz ? editQuiz.id : Date.now()
+    };
+
+    onSave(quizData, editQuiz ? 'edit' : 'add');
+    
+    if (!editQuiz) {
+      setFormData({
+        title: '',
+        question: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctAnswer: 'A'
+      });
+    }
   };
 
   const handleClose = () => {
@@ -52,7 +86,7 @@ function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Add Quiz to {courseName}</h2>
+        <h2>{editQuiz ? 'Edit Quiz' : 'Add Quiz to '}{!editQuiz && courseName}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Quiz Title</label>
@@ -140,7 +174,7 @@ function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
               type="submit" 
               className="btn btn-success"
             >
-              Add Quiz
+              {editQuiz ? 'Update Quiz' : 'Add Quiz'}
             </button>
           </div>
         </form>
@@ -150,3 +184,5 @@ function AddQuizModal({ isOpen, onClose, onSave, courseName }) {
 }
 
 export default AddQuizModal;
+
+

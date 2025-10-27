@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-function AddVideoModal({ isOpen, onClose, onSave, courseName }) {
+function AddVideoModal({ isOpen, onClose, onSave, courseName, editVideo = null }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     file: null
   });
+
+  // Update form when editing
+  useEffect(() => {
+    if (editVideo && isOpen) {
+      setFormData({
+        title: editVideo.title || '',
+        description: editVideo.description || '',
+        file: null
+      });
+    } else if (!isOpen) {
+      setFormData({ title: '', description: '', file: null });
+    }
+  }, [editVideo, isOpen]);
 
   if (!isOpen) return null;
 
@@ -15,7 +28,13 @@ function AddVideoModal({ isOpen, onClose, onSave, courseName }) {
       alert('Please enter a video title');
       return;
     }
-    onSave(formData);
+    
+    const videoData = {
+      ...formData,
+      id: editVideo ? editVideo.id : Date.now()
+    };
+    
+    onSave(videoData, editVideo ? 'edit' : 'add');
     setFormData({ title: '', description: '', file: null });
   };
 
@@ -27,7 +46,7 @@ function AddVideoModal({ isOpen, onClose, onSave, courseName }) {
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Add Video to {courseName}</h2>
+        <h2>{editVideo ? 'Edit Video' : 'Add Video to '}{!editVideo && courseName}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Video Title</label>
@@ -71,7 +90,7 @@ function AddVideoModal({ isOpen, onClose, onSave, courseName }) {
               type="submit" 
               className="btn btn-success"
             >
-              Add Video
+              {editVideo ? 'Update Video' : 'Add Video'}
             </button>
           </div>
         </form>
