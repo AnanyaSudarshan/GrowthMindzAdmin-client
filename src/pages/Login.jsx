@@ -1,63 +1,54 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import GrowthMindzIcon from '../components/GrowthMindzIcon';
-import { adminAPI } from '../services/api';
-import '../App.css';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import GrowthMindzIcon from "../components/GrowthMindzIcon";
+import { adminAPI } from "../services/api";
+import "../App.css";
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
-    try{
-      const response = await axios.post('http://localhost:5001/api/admin/login', { email, password, role });
-      if (response.data.message === 'Login successful') {
-        navigate('/admin-home');
-      } else {
-        setError(response.data.error);
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+
     // Clear any previous error
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       // Validation: All fields required
       if (!email.trim() || !password.trim() || !role) {
-        setError('All fields are required');
+        setError("All fields are required");
+        setIsLoading(false);
         return;
       }
 
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setError('Please enter a valid email address (e.g., user@example.com)');
+        setError("Please enter a valid email address (e.g., user@example.com)");
+        setIsLoading(false);
         return;
       }
 
       // Call API to login
       const response = await adminAPI.login(email, password, role);
-      
-      if (response.message === 'Login successful') {
+
+      if (response.message === "Login successful") {
         // Navigate based on role
-        if (role === 'Admin') {
-          navigate('/admin-home');
-        } else if (role === 'Staff') {
-          navigate('/staff-home');
+        if (role === "Admin") {
+          navigate("/admin-home");
+        } else if (role === "Staff") {
+          navigate("/staff-home");
         }
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      console.error("Login error:", err);
+      setError(err.response?.data?.error || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -77,9 +68,11 @@ function Login() {
               {error}
             </div>
           )}
-          
+
           <div className="mb-3">
-            <label htmlFor="email" className="form-label">Email</label>
+            <label htmlFor="email" className="form-label">
+              Email
+            </label>
             <input
               type="email"
               className="form-control"
@@ -91,7 +84,9 @@ function Login() {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="password" className="form-label">Password</label>
+            <label htmlFor="password" className="form-label">
+              Password
+            </label>
             <input
               type="password"
               className="form-control"
@@ -103,7 +98,9 @@ function Login() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="role" className="form-label">Role</label>
+            <label htmlFor="role" className="form-label">
+              Role
+            </label>
             <select
               className="form-select"
               id="role"
@@ -116,8 +113,12 @@ function Login() {
             </select>
           </div>
 
-          <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login'}
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

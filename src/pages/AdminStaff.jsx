@@ -1,39 +1,27 @@
-import { useState } from 'react';
-import AdminLayout from '../components/AdminLayout';
-import '../App.css';
+import { useEffect, useState } from "react";
+import AdminLayout from "../components/AdminLayout";
+import { adminAPI } from "../services/api";
+import "../App.css";
 
 function AdminStaff() {
-  // Sample staff data - in real app, this would come from an API
-  const [staff, setStaff] = useState([
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@growthmindz.com',
-      password: 'sarah@1234',
-      phone: '+1 234-567-8900'
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      email: 'michael.chen@growthmindz.com',
-      password: 'michael@1234',
-      phone: '+1 234-567-8901'
-    },
-    {
-      id: 3,
-      name: 'Emily Davis',
-      email: 'emily.davis@growthmindz.com',
-      password: 'emily@1234',
-      phone: '+1 234-567-8902'
-    },
-    {
-      id: 4,
-      name: 'David Wilson',
-      email: 'david.wilson@growthmindz.com',
-      password: 'david@1234',
-      phone: '+1 234-567-8903'
-    }
-  ]);
+  const [staff, setStaff] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await adminAPI.getStaff();
+        if (isMounted) setStaff(data);
+      } catch (e) {
+        setStaff([]);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -43,65 +31,89 @@ function AdminStaff() {
   const [selectAll, setSelectAll] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: ''
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
   });
 
   // Handle Add Staff
-  const handleAddStaff = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.phone) {
-      alert('All fields are required!');
+  const handleAddStaff = async () => {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.phone
+    ) {
+      alert("All fields are required!");
       return;
     }
 
-    const newStaff = {
-      id: staff.length + 1,
-      ...formData
-    };
-
-    setStaff([...staff, newStaff]);
-    setShowAddModal(false);
-    setFormData({ name: '', email: '', password: '', phone: '' });
-    
-    // TODO: API call to save to database
-    console.log('New staff added:', newStaff);
+    try {
+      setIsSubmitting(true);
+      setErrorMsg("");
+      const res = await adminAPI.addStaff(formData);
+      setStaff((prev) => [...prev, res.staff]);
+      setShowAddModal(false);
+      setFormData({ name: "", email: "", password: "", phone: "" });
+    } catch (e) {
+      const msg = e?.response?.data?.error || "Failed to add staff";
+      setErrorMsg(msg);
+      alert(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle Edit Staff
-  const handleEditStaff = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.phone) {
-      alert('All fields are required!');
+  const handleEditStaff = async () => {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.phone
+    ) {
+      alert("All fields are required!");
       return;
     }
 
-    setStaff(staff.map(s => s.id === selectedStaff.id ? { ...selectedStaff, ...formData } : s));
-    setShowEditModal(false);
-    setSelectedStaff(null);
-    setFormData({ name: '', email: '', password: '', phone: '' });
-    
-    // TODO: API call to update in database
-    console.log('Staff updated:', { ...selectedStaff, ...formData });
+    try {
+      setIsSubmitting(true);
+      setErrorMsg("");
+      const res = await adminAPI.updateStaff(selectedStaff.id, formData);
+      setStaff(staff.map((s) => (s.id === selectedStaff.id ? res.staff : s)));
+      setShowEditModal(false);
+      setSelectedStaff(null);
+      setFormData({ name: "", email: "", password: "", phone: "" });
+    } catch (e) {
+      const msg = e?.response?.data?.error || "Failed to update staff";
+      setErrorMsg(msg);
+      alert(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle Delete Staff
-  const handleDeleteStaff = () => {
+  const handleDeleteStaff = async () => {
     if (selectedIds.length === 0) {
-      alert('Please select at least one staff member to delete!');
+      alert("Please select at least one staff member to delete!");
       return;
     }
-    setStaff(staff.filter(s => !selectedIds.includes(s.id)));
+    try {
+      await adminAPI.deleteStaff(selectedIds);
+      setStaff(staff.filter((s) => !selectedIds.includes(s.id)));
+    } catch (e) {
+      const msg = e?.response?.data?.error || "Failed to delete staff";
+      alert(msg);
+    }
     setSelectedIds([]);
     setSelectAll(false);
     setShowDeleteModal(false);
-    
-    // TODO: API call to delete from database
-    console.log('Staff deleted:', selectedIds);
   };
 
   const openAddModal = () => {
-    setFormData({ name: '', email: '', password: '', phone: '' });
+    setFormData({ name: "", email: "", password: "", phone: "" });
     setShowAddModal(true);
   };
 
@@ -111,14 +123,14 @@ function AdminStaff() {
       name: staffMember.name,
       email: staffMember.email,
       password: staffMember.password,
-      phone: staffMember.phone
+      phone: staffMember.phone,
     });
     setShowEditModal(true);
   };
 
   const openDeleteModal = () => {
     if (selectedIds.length === 0) {
-      alert('Please select at least one staff member to delete!');
+      alert("Please select at least one staff member to delete!");
       return;
     }
     setShowDeleteModal(true);
@@ -127,7 +139,7 @@ function AdminStaff() {
   // Handle individual checkbox change
   const handleCheckboxChange = (id) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      setSelectedIds(selectedIds.filter((selectedId) => selectedId !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
     }
@@ -139,14 +151,14 @@ function AdminStaff() {
       setSelectedIds([]);
       setSelectAll(false);
     } else {
-      setSelectedIds(staff.map(s => s.id));
+      setSelectedIds(staff.map((s) => s.id));
       setSelectAll(true);
     }
   };
 
   // Get selected staff names for display in delete modal
   const getSelectedStaffNames = () => {
-    return staff.filter(s => selectedIds.includes(s.id)).map(s => s.name);
+    return staff.filter((s) => selectedIds.includes(s.id)).map((s) => s.name);
   };
 
   return (
@@ -157,8 +169,8 @@ function AdminStaff() {
           <button className="btn btn-primary" onClick={openAddModal}>
             ➕ Add Staff
           </button>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={openDeleteModal}
             disabled={selectedIds.length === 0}
           >
@@ -172,8 +184,8 @@ function AdminStaff() {
           <thead>
             <tr>
               <th>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={selectAll}
                   onChange={handleSelectAll}
                 />
@@ -182,32 +194,23 @@ function AdminStaff() {
               <th>Email ID</th>
               <th>Password</th>
               <th>Phone No</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {staff.map((staffMember) => (
               <tr key={staffMember.id}>
                 <td>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={selectedIds.includes(staffMember.id)}
                     onChange={() => handleCheckboxChange(staffMember.id)}
                   />
                 </td>
                 <td>{staffMember.name}</td>
                 <td>{staffMember.email}</td>
-                <td>{staffMember.password}</td>
+                <td>{staffMember.password ? "••••••" : "—"}</td>
                 <td>{staffMember.phone}</td>
-                <td>
-                  <button 
-                    className="btn-icon btn-edit"
-                    onClick={() => openEditModal(staffMember)}
-                    title="Edit Staff"
-                  >
-                    ✏️
-                  </button>
-                </td>
+                {/* Actions column removed */}
               </tr>
             ))}
           </tbody>
@@ -225,7 +228,9 @@ function AdminStaff() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Enter staff name"
                 />
               </div>
@@ -234,7 +239,9 @@ function AdminStaff() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="Enter email address"
                 />
               </div>
@@ -243,7 +250,9 @@ function AdminStaff() {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   placeholder="Enter password"
                 />
               </div>
@@ -252,20 +261,22 @@ function AdminStaff() {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   placeholder="Enter phone number"
                 />
               </div>
               <div className="modal-actions">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowAddModal(false)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={handleAddStaff}
                 >
@@ -288,7 +299,9 @@ function AdminStaff() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Enter staff name"
                 />
               </div>
@@ -297,7 +310,9 @@ function AdminStaff() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="Enter email address"
                 />
               </div>
@@ -306,7 +321,9 @@ function AdminStaff() {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   placeholder="Enter password"
                 />
               </div>
@@ -315,20 +332,22 @@ function AdminStaff() {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   placeholder="Enter phone number"
                 />
               </div>
               <div className="modal-actions">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowEditModal(false)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={handleEditStaff}
                 >
@@ -342,10 +361,19 @@ function AdminStaff() {
 
       {/* Delete Staff Modal */}
       {showDeleteModal && (
-        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="modal-content modal-delete" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            className="modal-content modal-delete"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Delete Staff</h2>
-            <p>Are you sure you want to delete {selectedIds.length} staff member(s)?</p>
+            <p>
+              Are you sure you want to delete {selectedIds.length} staff
+              member(s)?
+            </p>
             <div className="selected-staff-list">
               <strong>Selected Staff:</strong>
               <ul>
@@ -356,15 +384,15 @@ function AdminStaff() {
             </div>
             <p className="warning-text">This action cannot be undone.</p>
             <div className="modal-actions">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn btn-secondary"
                 onClick={() => setShowDeleteModal(false)}
               >
                 Cancel
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn btn-danger"
                 onClick={handleDeleteStaff}
               >
