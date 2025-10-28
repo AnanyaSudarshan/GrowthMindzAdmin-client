@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GrowthMindzIcon from '../components/GrowthMindzIcon';
+import { adminAPI } from '../services/api';
 import '../App.css';
 
 function Login() {
@@ -8,57 +9,57 @@ function Login() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
+
     e.preventDefault();
-    
+    try{
+      const response = await axios.post('http://localhost:5001/api/admin/login', { email, password, role });
+      if (response.data.message === 'Login successful') {
+        navigate('/admin-home');
+      } else {
+        setError(response.data.error);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
     // Clear any previous error
     setError('');
+    setIsLoading(true);
 
-    // Validation: All fields required
-    if (!email.trim() || !password.trim() || !role) {
-      setError('All fields are required');
-      return;
-    }
+    try {
+      // Validation: All fields required
+      if (!email.trim() || !password.trim() || !role) {
+        setError('All fields are required');
+        return;
+      }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address (e.g., user@example.com)');
-      return;
-    }
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError('Please enter a valid email address (e.g., user@example.com)');
+        return;
+      }
 
-    // Password validation
-    // Check length
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    // Check for at least one letter
-    if (!/[a-zA-Z]/.test(password)) {
-      setError('Password must contain at least one letter');
-      return;
-    }
-
-    // Check for at least one number
-    if (!/\d/.test(password)) {
-      setError('Password must contain at least one number');
-      return;
-    }
-
-    // Check for at least one special character
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      setError('Password must contain at least one special character');
-      return;
-    }
-
-    // Navigate based on role
-    if (role === 'Admin') {
-      navigate('/admin-home');
-    } else if (role === 'Staff') {
-      navigate('/staff-home');
+      // Call API to login
+      const response = await adminAPI.login(email, password, role);
+      
+      if (response.message === 'Login successful') {
+        // Navigate based on role
+        if (role === 'Admin') {
+          navigate('/admin-home');
+        } else if (role === 'Staff') {
+          navigate('/staff-home');
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,8 +116,8 @@ function Login() {
             </select>
           </div>
 
-          <button type="submit" className="btn btn-primary w-100">
-            Login
+          <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>
