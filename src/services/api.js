@@ -94,6 +94,17 @@ export const adminAPI = {
     const response = await api.delete('/admin/staff', { data: { ids } });
     return response.data;
   },
+
+  // Profile
+  getProfile: async () => {
+    const response = await api.get('/admin/profile');
+    return response.data;
+  },
+
+  updateProfile: async (profileData) => {
+    const response = await api.put('/admin/profile', profileData);
+    return response.data;
+  },
 };
 
 export default api;

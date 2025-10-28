@@ -4,25 +4,26 @@ import GrowthMindzIcon from './GrowthMindzIcon';
 
 function StaffLayout({ children, activeMenuItem = '' }) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const userEmail = 'staff@growthmindz.com';
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (only when open)
   useEffect(() => {
+    if (!showDropdown) return;
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside, true);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside, true);
     };
-  }, []);
+  }, [showDropdown]);
 
   const handleLogout = () => {
-    navigate('/login');
+    navigate('/login', {state: {logoutSuccess: true}});
   };
 
   const handleLogoClick = () => {
@@ -60,26 +61,7 @@ function StaffLayout({ children, activeMenuItem = '' }) {
             <span className="navbar-brand">GrowthMindz</span>
           </button>
         </div>
-        <div className="navbar-right">
-          <div className="user-menu" ref={dropdownRef}>
-            <button 
-              className="user-button"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              Staff User <span className="dropdown-arrow">▼</span>
-            </button>
-            {showDropdown && (
-              <div className="dropdown-menu">
-                <button className="dropdown-item" onClick={handleEditProfile}>
-                  Edit Profile
-                </button>
-                <button className="dropdown-item" onClick={handleLogout}>
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Navbar right removed as per requirement */}
       </nav>
 
       <div className="admin-content-wrapper">
@@ -96,7 +78,15 @@ function StaffLayout({ children, activeMenuItem = '' }) {
                 👥 Users
               </button>
             </li>
+            <li className={`sidebar-item ${activeMenuItem === 'profile' ? 'active' : ''}`}>
+              <button onClick={() => handleMenuClick('/staff/profile')}>
+                📝 Edit Profile
+              </button>
+            </li>
           </ul>
+          <button className="btn btn-danger logout-btn" style={{marginTop: 'auto', width: '90%', marginLeft:'5%', marginBottom:'20px'}} onClick={() => handleLogout()}>
+            🚪 Logout
+          </button>
         </aside>
 
         {/* Main Content */}
@@ -109,6 +99,11 @@ function StaffLayout({ children, activeMenuItem = '' }) {
 }
 
 export default StaffLayout;
+
+
+
+
+
 
 
 

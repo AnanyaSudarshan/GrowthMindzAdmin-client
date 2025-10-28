@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import GrowthMindzIcon from "../components/GrowthMindzIcon";
 import { adminAPI } from "../services/api";
 import "../App.css";
@@ -11,6 +11,7 @@ function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +63,7 @@ function Login() {
           <h2 className="logo-title">GrowthMindz</h2>
         </div>
         <h2 className="page-title">Login</h2>
+        {/* Show logout success alert if redirected after logout */}
         <form onSubmit={handleSubmit}>
           {error && (
             <div className="alert alert-danger" role="alert">
