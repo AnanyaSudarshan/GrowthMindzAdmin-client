@@ -4,7 +4,7 @@ import GrowthMindzIcon from './GrowthMindzIcon';
 
 function StaffLayout({ children, activeMenuItem = '' }) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const userEmail = 'staff@growthmindz.com';
+  const userEmail = 'staff@mindsetmovez.com';
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
@@ -58,7 +58,7 @@ function StaffLayout({ children, activeMenuItem = '' }) {
             }}
           >
             <GrowthMindzIcon />
-            <span className="navbar-brand">GrowthMindz</span>
+            <span className="navbar-brand">MindsetMovez</span>
           </button>
         </div>
         {/* Navbar right removed as per requirement */}

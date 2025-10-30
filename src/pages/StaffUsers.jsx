@@ -1,53 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import StaffLayout from '../components/StaffLayout';
+import { adminAPI } from '../services/api';
 import '../App.css';
 
 function StaffUsers() {
-  // Sample user data - in real app, this would come from an API
-  const [users] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      course: 'Data Science Fundamentals',
-      progress: 75
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      course: 'Full Stack Development',
-      progress: 45
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      course: 'Data Science Fundamentals',
-      progress: 90
-    },
-    {
-      id: 4,
-      name: 'Alice Williams',
-      email: 'alice.williams@example.com',
-      course: 'Python Programming',
-      progress: 30
-    },
-    {
-      id: 5,
-      name: 'Charlie Brown',
-      email: 'charlie.brown@example.com',
-      course: 'Full Stack Development',
-      progress: 60
-    },
-    {
-      id: 6,
-      name: 'Diana Prince',
-      email: 'diana.prince@example.com',
-      course: 'Python Programming',
-      progress: 55
-    }
-  ]);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await adminAPI.getUsers();
+        if (mounted) setUsers(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (mounted) setUsers([]);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <StaffLayout activeMenuItem="users">
@@ -57,7 +27,8 @@ function StaffUsers() {
         <table className="users-table">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>First Name</th>
+              <th>Last Name</th>
               <th>Email ID</th>
               <th>Course Opted</th>
               <th>Progress</th>
@@ -66,9 +37,10 @@ function StaffUsers() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
-                <td>{user.name}</td>
+                <td>{user.first_name || (user.name ? user.name.split(' ')[0] : '')}</td>
+                <td>{user.last_name || (user.name ? user.name.split(' ').slice(1).join(' ') : '')}</td>
                 <td>{user.email}</td>
-                <td>{user.course}</td>
+                <td>{user.course_opted}</td>
                 <td>
                   <div className="progress-container">
                     <div className="progress-bar">

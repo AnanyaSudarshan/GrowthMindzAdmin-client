@@ -29,7 +29,8 @@ function AdminUsers() {
         <table className="users-table">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>First Name</th>
+              <th>Last Name</th>
               <th>Email ID</th>
               <th>Course Opted</th>
               <th>Progress</th>
@@ -38,9 +39,10 @@ function AdminUsers() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
-                <td>{user.name}</td>
+                <td>{user.first_name || (user.name ? user.name.split(' ')[0] : '')}</td>
+                <td>{user.last_name || (user.name ? user.name.split(' ').slice(1).join(' ') : '')}</td>
                 <td>{user.email}</td>
-                <td>{user.course}</td>
+                <td>{user.course_opted}</td>
                 <td>
                   <div className="progress-container">
                     <div className="progress-bar">

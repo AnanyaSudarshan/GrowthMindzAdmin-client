@@ -1,77 +1,152 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import StaffLayout from '../components/StaffLayout';
-import AddVideoModal from '../components/AddVideoModal';
 import QuizBuilderModal from '../components/QuizBuilderModal';
 import QuizDetailsModal from '../components/QuizDetailsModal';
+import AddCourseVideoModal from '../components/AddCourseVideoModal';
+import { adminAPI } from '../services/api';
 import '../App.css';
 
 function StaffCourses() {
-  const [courses] = useState([
-    { 
-      id: 1, 
-      name: "NISM Course", 
-      videos: [{ id: 1, title: "Intro to NISM", description: "Introduction to NISM concepts" }], 
-      quizzes: [{ 
-        id: 1,
-        type: 'quiz-builder',
-        title: "Basic Quiz",
-        questions: [
-          {
-            id: 1,
-            questionText: "What is NISM?",
-            optionA: "National Institute of Securities Markets",
-            optionB: "New System",
-            optionC: "None",
-            optionD: "Other",
-            correctAnswer: "A"
-          }
-        ],
-        createdAt: new Date().toISOString()
-      }] 
-    },
-    { 
-      id: 2, 
-      name: "Stock Market", 
-      videos: [
-        { id: 2, title: "Basics of Stock Trading", description: "Learn the fundamentals" },
-        { id: 3, title: "Technical Analysis", description: "Understanding charts" }
-      ], 
-      quizzes: [
-        { 
-          id: 2,
-          type: 'quiz-builder',
-          title: "Stock Fundamentals",
-          questions: [
-            {
-              id: 1,
-              questionText: "What is a bull market?",
-              optionA: "Rising market",
-              optionB: "Falling market",
-              optionC: "Stable market",
-              optionD: "None",
-              correctAnswer: "A"
-            }
-          ],
-          createdAt: new Date().toISOString()
-        }
-      ] 
-    },
-    { 
-      id: 3, 
-      name: "Forex Market", 
-      videos: [], 
-      quizzes: [] 
-    }
-  ]);
+  const [courses, setCourses] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [showAddVideoModal, setShowAddVideoModal] = useState(false);
   const [showQuizBuilderModal, setShowQuizBuilderModal] = useState(false);
-  const [localCourses, setLocalCourses] = useState(courses);
+  const [localCourses, setLocalCourses] = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizDetailsOpen, setQuizDetailsOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [questionEditIdx, setQuestionEditIdx] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // DB-backed Course Videos (courses_vedio)
+  const [courseVideos, setCourseVideos] = useState([]);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvError, setCvError] = useState('');
+  const [showCvModal, setShowCvModal] = useState(false);
+  const [showCvEditModal, setShowCvEditModal] = useState(false);
+  const [cvEditTargetId, setCvEditTargetId] = useState(null);
+  const [cvEditInitial, setCvEditInitial] = useState(null);
+
+  const fetchCourses = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await adminAPI.getCourses();
+      setCourses(data || []);
+      setLocalCourses(data || []);
+    } catch (e) {
+      setCourses([]);
+      setLocalCourses([]);
+      setError('Failed to load courses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditCourseVideo = (v) => {
+    setCvEditTargetId(v.id);
+    setCvEditInitial({ title: v.course_vedio_title, url: v.vedio_url, description: v.description });
+    setShowCvEditModal(true);
+  };
+
+  const handleUpdateCourseVideoDb = async ({ title, url, description }) => {
+    const t = (title || '').trim();
+    const u = (url || '').trim();
+    const d = description || '';
+    if (!t || !u || !cvEditTargetId) {
+      alert('Please fill Course Video Title and Video URL');
+      return false;
+    }
+    try {
+      const res = await adminAPI.updateCourseVideo(cvEditTargetId, {
+        course_vedio_title: t,
+        vedio_url: u,
+        description: d,
+      });
+      const updated = res?.video;
+      if (updated) {
+        setCourseVideos((prev) => prev.map(v => v.id === cvEditTargetId ? updated : v));
+        return true;
+      } else {
+        alert('Unexpected response while updating video');
+        return false;
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Failed to update video';
+      alert(msg);
+      return false;
+    }
+  };
+
+  const deleteCourseVideo = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this video?')) return;
+    try {
+      await adminAPI.deleteCourseVideo(id);
+      setCourseVideos((prev) => prev.filter(v => v.id !== id));
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Failed to delete video';
+      alert(msg);
+    }
+  };
+
+  const handleAddCourseVideoDb = async ({ title, url, description }) => {
+    if (!selectedCourse) return false;
+    const t = (title || '').trim();
+    const u = (url || '').trim();
+    const d = description || '';
+    if (!t || !u) {
+      alert('Please fill Course Video Title and Video URL');
+      return false;
+    }
+    try {
+      const res = await adminAPI.addCourseVideo({
+        course_vedio_title: t,
+        vedio_url: u,
+        description: d,
+        course_title: selectedCourse.name,
+      });
+      if (res && res.video) {
+        setCourseVideos((prev) => [...prev, res.video]);
+        return true;
+      } else {
+        alert('Unexpected response while adding video');
+        return false;
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Failed to add video';
+      alert(msg);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      await fetchCourses();
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchDbVideos = async () => {
+      if (!selectedCourse) return;
+      setCvLoading(true);
+      setCvError('');
+      try {
+        const vids = await adminAPI.getCourseVideos(selectedCourse.name);
+        setCourseVideos(Array.isArray(vids) ? vids : []);
+      } catch (e) {
+        setCourseVideos([]);
+        setCvError('Failed to load course videos');
+      } finally {
+        setCvLoading(false);
+      }
+    };
+    fetchDbVideos();
+  }, [selectedCourse]);
 
   // Add Video
   const handleAddVideo = (videoData) => {
@@ -177,7 +252,6 @@ function StaffCourses() {
   };
 
   if (selectedCourse) {
-    // Course Details View
     return (
       <StaffLayout activeMenuItem="courses">
         <div className="course-details-page">
@@ -192,90 +266,73 @@ function StaffCourses() {
             </div>
           </div>
 
-          {/* Videos Section */}
+          {/* Course Videos (DB) Section */}
           <div className="content-section">
             <div className="section-header">
-              <h2>📹 Videos</h2>
-              <button 
-                className="btn btn-success" 
-                onClick={() => setShowAddVideoModal(true)}
-              >
-                ➕ Add Video
-              </button>
+              <h2>🎞️ Course Videos</h2>
+              <button className="btn btn-success" onClick={() => setShowCvModal(true)}>➕ Add Video</button>
             </div>
-            <div className="items-list">
-              {selectedCourse.videos.length === 0 ? (
-                <p className="empty-state">No videos yet. Add one to get started!</p>
-              ) : (
-                selectedCourse.videos.map(video => (
-                  <div key={video.id} className="item-card">
-                    <div className="item-info">
-                      <h3>{video.title}</h3>
-                      <p>{video.description}</p>
-                    </div>
-                    <button 
-                      className="btn btn-danger btn-small"
-                      onClick={() => handleDeleteVideo(video.id)}
-                    >
-                      ❌ Delete
-                    </button>
-                  </div>
-                ))
-              )}
+            {cvLoading && <p>Loading videos...</p>}
+            {!!cvError && <p className="error-text">{cvError}</p>}
+            <div className="table-responsive table-card">
+              <table className="table video-table">
+                <thead>
+                  <tr>
+                    <th>Course Video Title</th>
+                    <th>Video URL</th>
+                    <th>Description</th>
+                    <th style={{width:'140px'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courseVideos.map((v) => (
+                    <tr key={v.id}>
+                      <td>{v.course_vedio_title}</td>
+                      <td><a href={v.vedio_url} target="_blank" rel="noreferrer">{v.vedio_url}</a></td>
+                      <td>{v.description}</td>
+                      <td>
+                        <div className="video-actions">
+                          <button className="btn btn-secondary btn-small" onClick={()=>openEditCourseVideo(v)}>✏️ Edit</button>
+                          <button className="btn btn-danger btn-small" onClick={()=>deleteCourseVideo(v.id)}>❌ Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {courseVideos.length === 0 && !cvLoading && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center' }}>No videos yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          
 
           {/* Quizzes Section */}
           <div className="content-section">
             <div className="section-header">
               <h2>📝 Quizzes</h2>
-              <button 
-                className="btn btn-success" 
-                onClick={() => {
-                  setEditingQuiz(null);
-                  setShowQuizBuilderModal(true);
-                }}
-              >
-                ➕ Add Quiz
-              </button>
+              <button className="btn btn-success" onClick={() => { setEditingQuiz(null); setShowQuizBuilderModal(true); }}>➕ Add Quiz</button>
             </div>
             <div className="items-list">
               {selectedCourse.quizzes.length === 0 ? (
                 <p className="empty-state">No quizzes yet. Add one to get started!</p>
               ) : (
-                selectedCourse.quizzes.map(quiz => (
+                selectedCourse.quizzes.map((quiz) => (
                   <div key={quiz.id} className="item-card">
                     <div className="item-info">
                       <h3>{quiz.title}</h3>
                       <div>
                         <p><strong>Questions:</strong> {quiz.questions?.length || 0}</p>
-                        {quiz.createdAt && (
-                          <p className="created-at">Created: {new Date(quiz.createdAt).toLocaleDateString()}</p>
-                        )}
+                        {quiz.createdAt && <p className="created-at">Created: {new Date(quiz.createdAt).toLocaleDateString()}</p>}
                       </div>
                     </div>
                     <div className="item-actions">
-                      <button
-                        className="btn btn-secondary btn-small"
-                        onClick={() => {
-                          setSelectedQuiz(quiz);
-                          setQuizDetailsOpen(true);
-                        }}
-                      >
-                        📋 View Questions
-                      </button>
-                      <button 
-                        className="btn btn-secondary btn-small"
-                        onClick={() => openEditQuizModal(quiz)}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button 
-                        className="btn btn-danger btn-small"
-                        onClick={() => handleDeleteQuiz(quiz.id)}
-                      >
-                        ❌ Delete
-                      </button>
+                      <button className="btn btn-secondary btn-small" onClick={() => { setSelectedQuiz(quiz); setQuizDetailsOpen(true); }}>📋 View Questions</button>
+                      <button className="btn btn-secondary btn-small" onClick={() => openEditQuizModal(quiz)}>✏️ Edit</button>
+                      <button className="btn btn-danger btn-small" onClick={() => handleDeleteQuiz(quiz.id)}>❌ Delete</button>
                     </div>
                   </div>
                 ))
@@ -285,19 +342,9 @@ function StaffCourses() {
         </div>
 
         {/* Modals */}
-        <AddVideoModal 
-          isOpen={showAddVideoModal}
-          onClose={() => setShowAddVideoModal(false)}
-          onSave={handleAddVideo}
-          courseName={selectedCourse.name}
-        />
-        <QuizBuilderModal 
+        <QuizBuilderModal
           isOpen={showQuizBuilderModal}
-          onClose={() => {
-            setShowQuizBuilderModal(false);
-            setEditingQuiz(null);
-            setQuestionEditIdx(null);
-          }}
+          onClose={() => { setShowQuizBuilderModal(false); setEditingQuiz(null); setQuestionEditIdx(null); }}
           onSave={handleAddQuizBuilder}
           courseName={selectedCourse.name}
           editQuiz={editingQuiz}
@@ -305,25 +352,27 @@ function StaffCourses() {
         />
         <QuizDetailsModal
           isOpen={quizDetailsOpen && !!selectedQuiz}
-          onClose={() => {
-            setQuizDetailsOpen(false);
-            setSelectedQuiz(null);
-            setQuestionEditIdx(null);
-          }}
+          onClose={() => { setQuizDetailsOpen(false); setSelectedQuiz(null); setQuestionEditIdx(null); }}
           quiz={selectedQuiz}
-          onEditQuiz={() => {
-            setQuizDetailsOpen(false);
-            setEditingQuiz(selectedQuiz);
-            setShowQuizBuilderModal(true);
-            setQuestionEditIdx(null);
-          }}
-          onEditQuestion={qIdx => {
-            setQuizDetailsOpen(false);
-            setEditingQuiz({ ...selectedQuiz, _editQuestionIdx: qIdx });
-            setShowQuizBuilderModal(true);
-            setQuestionEditIdx(qIdx);
-          }}
+          onEditQuiz={() => { setQuizDetailsOpen(false); setEditingQuiz(selectedCourse); setShowQuizBuilderModal(true); setQuestionEditIdx(null); }}
+          onEditQuestion={(qIdx) => { setQuizDetailsOpen(false); setEditingQuiz({ ...selectedQuiz, _editQuestionIdx: qIdx }); setShowQuizBuilderModal(true); setQuestionEditIdx(qIdx); }}
         />
+        <AddCourseVideoModal
+          isOpen={showCvModal}
+          onClose={() => setShowCvModal(false)}
+          onSave={handleAddCourseVideoDb}
+          courseTitle={selectedCourse.name}
+        />
+        {showCvEditModal && (
+          <AddCourseVideoModal
+            isOpen={showCvEditModal}
+            onClose={() => setShowCvEditModal(false)}
+            onSave={async (payload)=>{ const ok = await handleUpdateCourseVideoDb(payload); if (ok) setShowCvEditModal(false); return ok; }}
+            courseTitle={selectedCourse.name}
+            mode="edit"
+            initial={cvEditInitial}
+          />
+        )}
       </StaffLayout>
     );
   }
@@ -332,7 +381,13 @@ function StaffCourses() {
   return (
     <StaffLayout activeMenuItem="courses">
       <div className="courses-page">
-        <h1 className="page-header">Courses Management</h1>
+        <div className="courses-header">
+          <h1 className="page-header">Courses</h1>
+          <button className="btn btn-secondary" onClick={fetchCourses}>⟳ Refresh</button>
+        </div>
+
+        {loading && <p>Loading courses...</p>}
+        {!!error && <p className="error-text">{error}</p>}
 
         <div className="courses-grid">
           {localCourses.map(course => (

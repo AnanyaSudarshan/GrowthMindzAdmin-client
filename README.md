@@ -1,6 +1,6 @@
-# GrowthMindz Admin Portal
+# MindsetMovez Admin Portal
 
-A React-based admin portal application for GrowthMindz with role-based authentication and navigation.
+A React-based admin portal application for MindsetMovez with role-based authentication and navigation.
 
 ## Features
 
@@ -130,4 +130,4 @@ import NewPage from './pages/NewPage';
 
 ## License
 
-This project is created for GrowthMindz Admin Portal.
+This project is created for MindsetMovez Admin Portal.

@@ -1323,3 +1323,49 @@ body {
   box-shadow: 0 8px 16px rgba(229, 62, 62, 0.18);
   transform: translateY(-2px);
 }
+
+/* Course Videos Table Styling */
+.table-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.table.video-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table.video-table thead th {
+  background: #e9f2ff;
+  color: #1f3b5b;
+  font-weight: 700;
+  padding: 12px;
+  border-bottom: 2px solid #d6e6ff;
+}
+
+.table.video-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.table.video-table tbody tr:nth-child(odd) {
+  background: #fafafa;
+}
+
+.table.video-table tbody tr:hover {
+  background: #f3f8ff;
+}
+
+.table.video-table a {
+  color: #2b6cb0;
+  text-decoration: underline;
+}
+
+/* Spacing between action buttons in video table */
+.table.video-table td .btn + .btn {
+  margin-left: 8px;
+}

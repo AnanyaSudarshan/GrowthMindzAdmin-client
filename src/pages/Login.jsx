@@ -60,7 +60,7 @@ function Login() {
       <div className="login-card">
         <div className="logo-container">
           <GrowthMindzIcon />
-          <h2 className="logo-title">GrowthMindz</h2>
+          <h2 className="logo-title">MindsetMovez</h2>
         </div>
         <h2 className="page-title">Login</h2>
         {/* Show logout success alert if redirected after logout */}

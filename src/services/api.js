@@ -74,6 +74,29 @@ export const adminAPI = {
     return response.data;
   },
 
+  // Course videos by course_title (courses_vedio)
+  getCourseVideos: async (courseTitle) => {
+    const response = await api.get('/admin/course-videos', {
+      params: { course_title: courseTitle },
+    });
+    return response.data;
+  },
+
+  addCourseVideo: async (videoData) => {
+    const response = await api.post('/admin/course-videos', videoData);
+    return response.data;
+  },
+
+  updateCourseVideo: async (id, videoData) => {
+    const response = await api.put(`/admin/course-videos/${id}`, videoData);
+    return response.data;
+  },
+
+  deleteCourseVideo: async (id) => {
+    const response = await api.delete(`/admin/course-videos/${id}`);
+    return response.data;
+  },
+
   // Staff
   getStaff: async () => {
     const response = await api.get('/admin/staff');
