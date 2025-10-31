@@ -1,8 +1,26 @@
 import { useNavigate } from 'react-router-dom';
 import StaffLayout from '../components/StaffLayout';
+import { useEffect, useState } from 'react';
+import { adminAPI } from '../services/api';
 
 function StaffHome() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ users: 0, courses: 0 });
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const data = await adminAPI.getDashboardStats();
+        if (isMounted) setStats({ users: data.users || 0, courses: data.courses || 0 });
+      } catch (e) {
+        // keep defaults on error
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleCardClick = (path) => {
     navigate(path);
@@ -21,7 +39,7 @@ function StaffHome() {
           <div className="card-icon">👥</div>
           <div className="card-content">
             <h3>Users</h3>
-            <p className="card-count">1,234</p>
+            <p className="card-count">{stats.users}</p>
           </div>
         </div>
 
@@ -33,7 +51,7 @@ function StaffHome() {
           <div className="card-icon">📚</div>
           <div className="card-content">
             <h3>Courses</h3>
-            <p className="card-count">45</p>
+            <p className="card-count">{stats.courses}</p>
           </div>
         </div>
       </div>
