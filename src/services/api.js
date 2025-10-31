@@ -74,6 +74,27 @@ export const adminAPI = {
     return response.data;
   },
 
+  // Normalized Quizzes (quizes / quiz_content)
+  getQuizzesByCourse: async (cid) => {
+    const response = await api.get(`/quizzes/${cid}`);
+    return response.data;
+  },
+
+  createQuiz: async (payload) => {
+    const response = await api.post('/quizzes', payload);
+    return response.data;
+  },
+
+  updateQuiz: async (qid, payload) => {
+    const response = await api.put(`/quizzes/${qid}`, payload);
+    return response.data;
+  },
+
+  deleteQuiz: async (qid) => {
+    const response = await api.delete(`/quizzes/${qid}`);
+    return response.data;
+  },
+
   // Course videos by course_title (courses_vedio)
   getCourseVideos: async (courseTitle) => {
     const response = await api.get('/admin/course-videos', {

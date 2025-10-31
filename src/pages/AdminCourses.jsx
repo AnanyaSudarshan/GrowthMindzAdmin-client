@@ -123,6 +123,11 @@ function AdminCourses() {
   const [quizDetailsOpen, setQuizDetailsOpen] = useState(false);
   const [questionEditIdx, setQuestionEditIdx] = useState(null);
 
+  // DB-backed Quizzes (quizes / quiz_content) state
+  const [quizzesDb, setQuizzesDb] = useState([]);
+  const [qzLoading, setQzLoading] = useState(false);
+  const [qzError, setQzError] = useState("");
+
   // DB-backed Course Videos (courses_vedio) state
   const [courseVideos, setCourseVideos] = useState([]);
   const [cvLoading, setCvLoading] = useState(false);
@@ -148,6 +153,39 @@ function AdminCourses() {
       }
     };
     fetchDbVideos();
+  }, [selectedCourse]);
+
+  // Load quizzes for selected course from backend
+  useEffect(() => {
+    const fetchDbQuizzes = async () => {
+      if (!selectedCourse) return;
+      setQzLoading(true);
+      setQzError("");
+      try {
+        const data = await adminAPI.getQuizzesByCourse(selectedCourse.id);
+        const mapped = Array.isArray(data) ? data.map(q => ({
+          id: q.qid,
+          title: q.quiz_title,
+          createdAt: q.created_at,
+          questions: (q.questions || []).map(qq => ({
+            questionId: qq.question_id,
+            questionText: qq.question,
+            optionA: qq.option_a,
+            optionB: qq.option_b,
+            optionC: qq.option_c,
+            optionD: qq.option_d,
+            correctAnswer: qq.correct_answer,
+          }))
+        })) : [];
+        setQuizzesDb(mapped);
+      } catch (e) {
+        setQuizzesDb([]);
+        setQzError('Failed to load quizzes');
+      } finally {
+        setQzLoading(false);
+      }
+    };
+    fetchDbQuizzes();
   }, [selectedCourse]);
 
   // Add Course
@@ -259,62 +297,59 @@ function AdminCourses() {
   };
 
   // Add/Edit Quiz (from quiz builder)
-  const handleAddQuizBuilder = (quizData, mode = "add") => {
+  const handleAddQuizBuilder = async (quizData, mode = "add") => {
     if (!selectedCourse) return;
 
-    if (mode === "edit") {
-      // Update existing quiz
-      const updatedQuiz = {
-        ...editingQuiz,
-        title: quizData.title,
-        questions: quizData.questions,
-      };
+    // Map UI payload to backend shape
+    const toBackendQuestions = (arr) => (arr || []).map(q => ({
+      question: q.questionText,
+      option_a: q.optionA,
+      option_b: q.optionB,
+      option_c: q.optionC,
+      option_d: q.optionD,
+      correct_answer: q.correctAnswer,
+      question_id: q.questionId // may be undefined for new
+    }));
 
-      setCourses(
-        courses.map((c) =>
-          c.id === selectedCourse.id
-            ? {
-                ...c,
-                quizzes: c.quizzes.map((q) =>
-                  q.id === editingQuiz.id ? updatedQuiz : q
-                ),
-              }
-            : c
-        )
-      );
-      setSelectedCourse({
-        ...selectedCourse,
-        quizzes: selectedCourse.quizzes.map((q) =>
-          q.id === editingQuiz.id ? updatedQuiz : q
-        ),
-      });
-      console.log("Quiz updated:", JSON.stringify(updatedQuiz, null, 2));
-    } else {
-      // Add new quiz
-      const newQuiz = {
-        id: Date.now(),
-        type: "quiz-builder",
-        title: quizData.title,
-        courseName: quizData.courseName,
-        questions: quizData.questions,
-        createdAt: quizData.createdAt,
-      };
+    try {
+      if (mode === 'edit' && editingQuiz) {
+        // Determine deleted questions: present in original but not in new payload
+        const originalIds = new Set((editingQuiz.questions || []).map(q => q.questionId).filter(Boolean));
+        const newIds = new Set((quizData.questions || []).map(q => q.questionId).filter(Boolean));
+        const deletedIds = Array.from(originalIds).filter(id => !newIds.has(id));
 
-      setCourses(
-        courses.map((c) =>
-          c.id === selectedCourse.id
-            ? { ...c, quizzes: [...c.quizzes, newQuiz] }
-            : c
-        )
-      );
-      setSelectedCourse({
-        ...selectedCourse,
-        quizzes: [...selectedCourse.quizzes, newQuiz],
-      });
-      console.log(
-        "Quiz with multiple questions added:",
-        JSON.stringify(newQuiz, null, 2)
-      );
+        await adminAPI.updateQuiz(editingQuiz.id, {
+          quiz_title: quizData.title,
+          questions: toBackendQuestions(quizData.questions),
+          deleted_question_ids: deletedIds,
+        });
+      } else {
+        await adminAPI.createQuiz({
+          cid: selectedCourse.id,
+          quiz_title: quizData.title,
+          questions: toBackendQuestions(quizData.questions),
+        });
+      }
+      // Refresh list
+      const fresh = await adminAPI.getQuizzesByCourse(selectedCourse.id);
+      const mapped = Array.isArray(fresh) ? fresh.map(q => ({
+        id: q.qid,
+        title: q.quiz_title,
+        createdAt: q.created_at,
+        questions: (q.questions || []).map(qq => ({
+          questionId: qq.question_id,
+          questionText: qq.question,
+          optionA: qq.option_a,
+          optionB: qq.option_b,
+          optionC: qq.option_c,
+          optionD: qq.option_d,
+          correctAnswer: qq.correct_answer,
+        }))
+      })) : [];
+      setQuizzesDb(mapped);
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Failed to save quiz';
+      alert(msg);
     }
 
     setShowQuizBuilderModal(false);
@@ -330,22 +365,16 @@ function AdminCourses() {
   };
 
   // Delete Quiz
-  const handleDeleteQuiz = (quizId) => {
+  const handleDeleteQuiz = async (quizId) => {
     if (!selectedCourse) return;
     if (!window.confirm("Are you sure you want to delete this quiz?")) return;
-
-    setCourses(
-      courses.map((c) =>
-        c.id === selectedCourse.id
-          ? { ...c, quizzes: c.quizzes.filter((q) => q.id !== quizId) }
-          : c
-      )
-    );
-    setSelectedCourse({
-      ...selectedCourse,
-      quizzes: selectedCourse.quizzes.filter((q) => q.id !== quizId),
-    });
-    console.log("Quiz deleted:", quizId);
+    try {
+      await adminAPI.deleteQuiz(quizId);
+      setQuizzesDb(prev => prev.filter(q => q.id !== quizId));
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Failed to delete quiz';
+      alert(msg);
+    }
   };
 
   // Show Delete Course Confirmation
@@ -435,13 +464,15 @@ function AdminCourses() {
                 ➕ Add Quiz
               </button>
             </div>
+            {qzLoading && <p>Loading quizzes...</p>}
+            {!!qzError && <p className="error-text">{qzError}</p>}
             <div className="items-list">
-              {selectedCourse.quizzes.length === 0 ? (
+              {quizzesDb.length === 0 && !qzLoading ? (
                 <p className="empty-state">
                   No quizzes yet. Add one to get started!
                 </p>
               ) : (
-                selectedCourse.quizzes.map((quiz) => (
+                quizzesDb.map((quiz) => (
                   <div key={quiz.id} className="item-card">
                     <div className="item-info">
                       <h3>{quiz.title}</h3>

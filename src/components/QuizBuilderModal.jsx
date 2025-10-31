@@ -19,19 +19,35 @@ function QuizBuilderModal({ isOpen, onClose, onSave, courseName, editQuiz = null
   useEffect(() => {
     if (editQuiz && isOpen) {
       setQuizTitle(editQuiz.title || '');
-      setQuestions(editQuiz.questions || [{
-        id: 1,
-        questionText: '',
-        optionA: '',
-        optionB: '',
-        optionC: '',
-        optionD: '',
-        correctAnswer: 'A'
-      }]);
+      const normalized = Array.isArray(editQuiz.questions) && editQuiz.questions.length > 0
+        ? editQuiz.questions.map((q, idx) => ({
+            // Local unique id for React list rendering
+            id: (q.id && typeof q.id === 'number') ? q.id : (q.questionId ?? (idx + 1)),
+            // Persist backend question id to ensure updates (not inserts) on save
+            questionId: q.questionId,
+            questionText: q.questionText ?? q.question ?? '',
+            optionA: q.optionA ?? q.option_a ?? '',
+            optionB: q.optionB ?? q.option_b ?? '',
+            optionC: q.optionC ?? q.option_c ?? '',
+            optionD: q.optionD ?? q.option_d ?? '',
+            correctAnswer: q.correctAnswer ?? q.correct_answer ?? 'A',
+          }))
+        : [{
+          id: 1,
+          questionId: undefined,
+          questionText: '',
+          optionA: '',
+          optionB: '',
+          optionC: '',
+          optionD: '',
+          correctAnswer: 'A'
+        }];
+      setQuestions(normalized);
     } else if (!isOpen) {
       setQuizTitle('');
       setQuestions([{
         id: 1,
+        questionId: undefined,
         questionText: '',
         optionA: '',
         optionB: '',
@@ -68,7 +84,8 @@ function QuizBuilderModal({ isOpen, onClose, onSave, courseName, editQuiz = null
 
   const addQuestion = () => {
     const newQuestion = {
-      id: Date.now(),
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      questionId: undefined,
       questionText: '',
       optionA: '',
       optionB: '',
